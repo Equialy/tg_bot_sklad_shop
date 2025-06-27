@@ -6,6 +6,8 @@ from aiogram.enums import ParseMode
 from aiogram import Bot, Dispatcher, types
 
 from src.bot.bot_commands.commands import private
+from src.bot.handlers.user import user_private_router
+from src.bot.start.dialogs import router as echo_router
 from src.config import config
 
 logger = logging.getLogger(__name__)
@@ -24,7 +26,10 @@ async def main():
     bot.my_admins_list = []
     dp = Dispatcher()
     # dp.update.middleware(DatabaseSessionMiddleware(session_pool=AsyncSessionFactory))
-    # dp.include_routers(  )
+    dp.include_routers(
+        echo_router,
+        user_private_router
+    )
 
     try:
         await bot.delete_webhook(drop_pending_updates=True)
