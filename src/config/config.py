@@ -58,4 +58,3 @@ class Settings(BaseSettings):
 
 
 setting = Settings()
-print(setting.tg_bot)
