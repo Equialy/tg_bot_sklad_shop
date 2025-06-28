@@ -79,10 +79,11 @@ async def back_state_handler(message: types.Message, state: FSMContext):
         previous = step
 
 
-@admin_router.message(StateFilter(None), F.text == "Добавить товар")
-async def change_product(message: types.Message, state: FSMContext):
+@admin_router.callback_query(StateFilter(None), F.data.startswith("add_product"))
+async def change_product(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(AddProduct.name)
-    await message.answer(text="Введите название товара")
+    await callback.answer()
+    await callback.message.answer(text="Введите название товара")
 
 
 @admin_router.callback_query(StateFilter(None), F.data.startswith("catalog_products"))

@@ -1,5 +1,5 @@
 from aiogram import Router, types, F
-from aiogram.filters import  StateFilter
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.utils import markdown
 from sqlalchemy.ext.asyncio import AsyncSession

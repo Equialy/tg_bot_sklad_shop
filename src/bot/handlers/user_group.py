@@ -35,7 +35,9 @@ async def start_handler(message: types.Message):
     )
 
 
-@user_group_router.callback_query(or_f(Command("catalog"), (F.data)))
+@user_group_router.callback_query(
+    or_f(Command("catalog"), (F.data.startswith("catalog")))
+)
 async def catalog_handler_group(callback: types.CallbackQuery, session: AsyncSession):
     await callback.message.answer(text="Каталог товаров:")
     products = await ProductsRepoImpl(session=session).get_all()
