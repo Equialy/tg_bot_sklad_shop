@@ -10,7 +10,9 @@ from src.bot.bot_commands.commands import private
 from src.bot.handlers.admin import admin_router
 from src.bot.handlers.user import user_private_router
 from src.bot.handlers.user_group import user_group_router
+from src.bot.middlwares.database import DatabaseSessionMiddleware
 from src.config import config
+from src.infrastructure.database.connection import  AsyncSessionFactory
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +30,7 @@ async def main():
     bot.my_admins_list = [config.setting.tg_bot.admin_id]
 
     dp = Dispatcher(fsm_strategy = FSMStrategy.USER_IN_CHAT)
-    # dp.update.middleware(DatabaseSessionMiddleware(session_pool=AsyncSessionFactory))
+    dp.update.middleware(DatabaseSessionMiddleware(session_factory=AsyncSessionFactory))
     dp.include_routers(
         # echo_router,
         admin_router,

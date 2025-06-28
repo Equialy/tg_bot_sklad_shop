@@ -1,15 +1,16 @@
 from aiogram import Router, types, F
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bot.filters.chat_types import ChatTypeFilter, IsAdmin
 from src.bot.handlers.admin_handlers.handler_category import admin_router_category
 from src.bot.keyboards.reply_keyboard import get_reply_keyboard
-from src.bot.states.states import AddProduct, AddCategoryProducts
-from src.infrastructure.database.connection import get_async_session
-import sqlalchemy as sa
+from src.bot.schemas.product_schema import ProductSchemaRead
+from src.bot.states.states import AddProduct
 
-from src.infrastructure.database.models.products_model import Category, Product
+from src.infrastructure.database.repositories.categories_repo import CategoryRepositoryImpl
+from src.infrastructure.database.repositories.products_repo import ProductsRepoImpl
 
 admin_router = Router(name=__name__)
 admin_router.message.filter(ChatTypeFilter(["private"]), IsAdmin())
@@ -87,14 +88,12 @@ async def exc_name_product(message: types.Message, state: FSMContext):
 
 
 @admin_router.message(AddProduct.description, F.text)
-async def add_description_product(message: types.Message, state: FSMContext):
+async def add_description_product(message: types.Message, state: FSMContext, session: AsyncSession):
     await state.update_data(description=message.text)
-    async with get_async_session() as session:
-        stmt = await session.execute(sa.select(Category.id, Category.name))
-        categories = [f"{row.id} — {row.name}" for row in stmt]
+    cats = await CategoryRepositoryImpl(session=session).get_all()
     await state.set_state(AddProduct.category_id)
     await message.answer(text="Выберите категорию",
-                         reply_markup=get_reply_keyboard(*categories, size=(2,)))
+                         reply_markup=get_reply_keyboard(*cats, size=(2,)))
 
 
 @admin_router.message(AddProduct.description)
@@ -116,10 +115,8 @@ async def update_category_product(message: types.Message, state: FSMContext):
 
 
 @admin_router.message(AddProduct.category_id)
-async def exc_category_product(message: types.Message, state: FSMContext):
-    async with get_async_session() as session:
-        stmt = await session.execute(sa.select(Category.id, Category.name))
-        categories = [f"{row.id} — {row.name}" for row in stmt]
+async def exc_category_product(message: types.Message, state: FSMContext, session: AsyncSession):
+    categories = await CategoryRepositoryImpl(session=session).get_all()
     await message.answer(text="Введены не корректные данные. Выберите категорию",
                          reply_markup=get_reply_keyboard(*categories, size=(2,)))
 
@@ -139,10 +136,13 @@ async def exc_price_product(message: types.Message, state: FSMContext):
 @admin_router.message(AddProduct.photo, F.photo)
 async def add_photo_product(message: types.Message, state: FSMContext):
     await state.update_data(photo=message.photo[-1].file_id)
-    await message.answer(text="Товар добавлен")
     data = await state.get_data()
-    await message.answer(str(data))
-    await state.clear()
+    await message.answer(
+        f"Создать товар?\n\nНазвание: <b>{data["name"]}</b>\nОписание: <b>{data["description"]}</b>\n\n"
+        "✅ — Да, создать\n❌ — Отмена",
+        reply_markup=get_reply_keyboard("✅ Да", "❌ Отмена"),
+    )
+    await state.set_state(AddProduct.confirmation)
 
 
 @admin_router.message(AddProduct.photo)
@@ -150,21 +150,24 @@ async def add_photo_product(message: types.Message, state: FSMContext):
     await message.answer(text="Введены не корректные данные. Добавте фото")
 
 
-async def save_to_db_product(message: types.Message, state: FSMContext):
+@admin_router.message(AddProduct.confirmation)
+async def save_to_db_product(message: types.Message, state: FSMContext, session: AsyncSession):
     # достаём из state остальные поля (name, description и т.д.)
-    data = await state.get_data()
-    name = data["name"]
-    description = data["description"]
-    category_id = data["category_id"]
-    async with get_async_session() as session:
-        new_product = Product(
+    if message.text == "✅ Да":
+        data = await state.get_data()
+        name = data["name"]
+        description = data["description"]
+        category_id = data["category_id"]
+        product = ProductSchemaRead(
             name=name,
             description=description,
             category_id=category_id,
         )
-        session.add(new_product)
-        await session.commit()
+        add_product = await ProductsRepoImpl(session=session).add(product)
+        await message.answer(f"Товар «{add_product.name}» успешно создан в категории {add_product.category_id}.",
+                             reply_markup=types.ReplyKeyboardRemove())
+        await message.answer(str(data))
 
-    await message.answer(f"Товар «{name}» успешно создан в категории {category_id}.",
-                         reply_markup=types.ReplyKeyboardRemove())
+    else:
+        await message.answer("Создание продукта отменено.", reply_markup=types.ReplyKeyboardRemove())
     await state.clear()

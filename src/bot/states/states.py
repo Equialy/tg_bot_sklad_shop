@@ -11,6 +11,7 @@ class AddProduct(StatesGroup):
     stock = State() # колличество
     photo1 = State()
     photo = State()
+    confirmation = State()
 
     texts = {
         'AddProduct:name': 'Введите название заново:',

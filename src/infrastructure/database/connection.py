@@ -1,7 +1,6 @@
 from contextlib import asynccontextmanager
 from typing import Annotated, AsyncGenerator
 
-
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -27,16 +26,16 @@ AsyncSessionFactory = async_sessionmaker(
 class Base(DeclarativeBase):
     pass
 
-@asynccontextmanager
-async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
-    async with AsyncSessionFactory() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception as e:
-            await session.rollback()
-            raise e
-        finally:
-            await session.close()
 
+# async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+#     async with AsyncSessionFactory() as session:
+#         try:
+#             yield session
+#             await session.commit()
+#         except Exception as e:
+#             await session.rollback()
+#             raise e
+#         finally:
+#             await session.close()
+#
 
