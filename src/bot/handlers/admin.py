@@ -19,6 +19,7 @@ admin_router.include_router(admin_router_category)
 ADMIN_KB = get_reply_keyboard(
     "Добавить товар",
     "Добавить категорию",
+    "Каталог",
     "Изменить товар",
     "Удалить товар",
     placeholder="Выберите действие",
@@ -59,9 +60,17 @@ async def back_state_handler(message: types.Message, state: FSMContext):
 
 @admin_router.message(StateFilter(None), F.text == "Добавить товар")
 async def change_product(message: types.Message, state: FSMContext):
-    await message.answer("ОК, вот список товаров", reply_markup=types.ReplyKeyboardRemove())
     await state.set_state(AddProduct.name)
     await message.answer(text="Введите название товара")
+
+@admin_router.message(StateFilter(None), F.text == "Каталог")
+async def change_product(message: types.Message, state: FSMContext, session: AsyncSession):
+    products = await ProductsRepoImpl(session=session).get_all()
+    await message.answer(text="<strong>Cписок товаров </strong>")
+    for idx, product in enumerate(products, start=1):
+        await message.answer(f"{idx}  {product.name}\n {product.description}",
+                             reply_markup=types.ReplyKeyboardRemove())
+
 
 
 @admin_router.message(F.text == "Изменить товар")
