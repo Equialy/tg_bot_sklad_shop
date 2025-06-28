@@ -19,6 +19,7 @@ class Product(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     category: Mapped["Category"] = relationship("Category", back_populates="products")
+
     variants: Mapped[list["Variant"]] = relationship(
         "Variant", back_populates="product", cascade="all, delete-orphan"
     )
@@ -50,7 +51,9 @@ class Variant(Base):
         Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True
     )
     sku: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    price: Mapped[Numeric] = mapped_column(Numeric(18, 2), nullable=False)
+    price: Mapped[int] = mapped_column(
+        Numeric(precision=18, scale=2), nullable=False, default=Decimal("0.00")
+    )
     stock: Mapped[int] = mapped_column(Integer, default=0)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     photo1: Mapped[str | None] = mapped_column(String, nullable=True)

@@ -4,6 +4,7 @@ import logging
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram import Bot, Dispatcher, types
+from aiogram.fsm.strategy import FSMStrategy
 
 from src.bot.bot_commands.commands import private
 from src.bot.handlers.admin import admin_router
@@ -24,8 +25,9 @@ async def main():
     # storage = RedisStorage(redis=redis)
 
     bot = Bot(token=config.setting.tg_bot.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    bot.my_admins_list = []
-    dp = Dispatcher()
+    bot.my_admins_list = [config.setting.tg_bot.admin_id]
+
+    dp = Dispatcher(fsm_strategy = FSMStrategy.USER_IN_CHAT)
     # dp.update.middleware(DatabaseSessionMiddleware(session_pool=AsyncSessionFactory))
     dp.include_routers(
         # echo_router,

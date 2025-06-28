@@ -1,23 +1,170 @@
-from aiogram import Router, types
-from aiogram.filters import CommandStart, Command
+from aiogram import Router, types, F
+from aiogram.filters import Command, StateFilter
+from aiogram.fsm.context import FSMContext
 
-from src.filters.chat_types import ChatTypeFilter, IsAdmin
-from src.keyboards.reply_keyboard import get_reply_keyboard
+from src.bot.filters.chat_types import ChatTypeFilter, IsAdmin
+from src.bot.handlers.admin_handlers.handler_category import admin_router_category
+from src.bot.keyboards.reply_keyboard import get_reply_keyboard
+from src.bot.states.states import AddProduct, AddCategoryProducts
+from src.infrastructure.database.connection import get_async_session
+import sqlalchemy as sa
+
+from src.infrastructure.database.models.products_model import Category, Product
 
 admin_router = Router(name=__name__)
 admin_router.message.filter(ChatTypeFilter(["private"]), IsAdmin())
-
+admin_router.include_router(admin_router_category)
 
 ADMIN_KB = get_reply_keyboard(
     "Добавить товар",
+    "Добавить категорию",
     "Изменить товар",
     "Удалить товар",
-    "Я так, просто посмотреть зашел",
     placeholder="Выберите действие",
-    size=(2, 1, 1),
+    size=(2, 1,),
 )
 
 
 @admin_router.message(Command("admin"))
 async def admin_features(message: types.Message):
     await message.answer("Что хотите сделать?", reply_markup=ADMIN_KB)
+
+
+@admin_router.message(StateFilter('*'), Command("отмена"))
+@admin_router.message(StateFilter('*'), F.text.casefold() == "отмена")
+async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+
+    await state.clear()
+    await message.answer("Действия отменены", reply_markup=ADMIN_KB)
+
+
+@admin_router.message(Command("назад"))
+@admin_router.message(StateFilter("*"), F.text.casefold() == "назад")
+async def back_state_handler(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state == AddProduct.name:
+        await message.answer(text="Предыдущего шага нет. Введите название товара или напишите отмена")
+        return
+    previous = None
+    for step in AddProduct.__all_states__:
+        if step.state == current_state:
+            await state.set_state(previous)
+            await message.answer(f"Вы вернулись к предыдущему шагу \n {AddProduct.texts[previous.state]}")
+        previous = step
+
+
+@admin_router.message(StateFilter(None), F.text == "Добавить товар")
+async def change_product(message: types.Message, state: FSMContext):
+    await message.answer("ОК, вот список товаров", reply_markup=types.ReplyKeyboardRemove())
+    await state.set_state(AddProduct.name)
+    await message.answer(text="Введите название товара")
+
+
+@admin_router.message(F.text == "Изменить товар")
+async def change_product(message: types.Message, state: FSMContext):
+    await message.answer("ОК, вот список товаров", reply_markup=types.ReplyKeyboardRemove())
+
+
+@admin_router.message(F.text == "Удалить товар")
+async def delete_product(message: types.Message, state: FSMContext):
+    await message.answer("Выберите товар(ы) для удаления")
+
+
+@admin_router.message(AddProduct.name, F.text)
+async def add_name_product(message: types.Message, state: FSMContext):
+    await state.update_data(name=message.text)
+    await message.answer(text="Введите описание товара", reply_markup=types.ReplyKeyboardRemove())
+    await state.set_state(AddProduct.description)
+
+
+@admin_router.message(AddProduct.name)
+async def exc_name_product(message: types.Message, state: FSMContext):
+    await message.answer(text="Введены не корректные данные. Введите название товара",
+                         reply_markup=types.ReplyKeyboardRemove())
+
+
+@admin_router.message(AddProduct.description, F.text)
+async def add_description_product(message: types.Message, state: FSMContext):
+    await state.update_data(description=message.text)
+    async with get_async_session() as session:
+        stmt = await session.execute(sa.select(Category.id, Category.name))
+        categories = [f"{row.id} — {row.name}" for row in stmt]
+    await state.set_state(AddProduct.category_id)
+    await message.answer(text="Выберите категорию",
+                         reply_markup=get_reply_keyboard(*categories, size=(2,)))
+
+
+@admin_router.message(AddProduct.description)
+async def exc_description_product(message: types.Message, state: FSMContext):
+    await message.answer(text="Введеные некорректные данные. Введите описание")
+
+
+@admin_router.message(AddProduct.category_id, F.text)
+async def update_category_product(message: types.Message, state: FSMContext):
+    text = message.text.strip()
+    try:
+        category_id = int(text.split("—", 1)[0].strip())
+    except (IndexError, ValueError):
+        await message.answer("Неверный формат. Выберите категорию из списка кнопок.")
+        return
+    await state.update_data(category_id=category_id)
+    await message.answer(text="Добавте цену", reply_markup=types.ReplyKeyboardRemove())
+    await state.set_state(AddProduct.price)
+
+
+@admin_router.message(AddProduct.category_id)
+async def exc_category_product(message: types.Message, state: FSMContext):
+    async with get_async_session() as session:
+        stmt = await session.execute(sa.select(Category.id, Category.name))
+        categories = [f"{row.id} — {row.name}" for row in stmt]
+    await message.answer(text="Введены не корректные данные. Выберите категорию",
+                         reply_markup=get_reply_keyboard(*categories, size=(2,)))
+
+
+@admin_router.message(AddProduct.price, F.text)
+async def add_price_product(message: types.Message, state: FSMContext):
+    await state.update_data(price=message.text)
+    await message.answer(text="Добавте изображение")
+    await state.set_state(AddProduct.photo)
+
+
+@admin_router.message(AddProduct.price)
+async def exc_price_product(message: types.Message, state: FSMContext):
+    await message.answer(text="Введены не корректные данные. Добавте цену")
+
+
+@admin_router.message(AddProduct.photo, F.photo)
+async def add_photo_product(message: types.Message, state: FSMContext):
+    await state.update_data(photo=message.photo[-1].file_id)
+    await message.answer(text="Товар добавлен")
+    data = await state.get_data()
+    await message.answer(str(data))
+    await state.clear()
+
+
+@admin_router.message(AddProduct.photo)
+async def add_photo_product(message: types.Message, state: FSMContext):
+    await message.answer(text="Введены не корректные данные. Добавте фото")
+
+
+async def save_to_db_product(message: types.Message, state: FSMContext):
+    # достаём из state остальные поля (name, description и т.д.)
+    data = await state.get_data()
+    name = data["name"]
+    description = data["description"]
+    category_id = data["category_id"]
+    async with get_async_session() as session:
+        new_product = Product(
+            name=name,
+            description=description,
+            category_id=category_id,
+        )
+        session.add(new_product)
+        await session.commit()
+
+    await message.answer(f"Товар «{name}» успешно создан в категории {category_id}.",
+                         reply_markup=types.ReplyKeyboardRemove())
+    await state.clear()

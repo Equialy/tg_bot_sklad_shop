@@ -27,7 +27,7 @@ AsyncSessionFactory = async_sessionmaker(
 class Base(DeclarativeBase):
     pass
 
-
+@asynccontextmanager
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionFactory() as session:
         try:

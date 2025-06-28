@@ -1,8 +1,8 @@
 from aiogram import Router, types
 from aiogram.filters import CommandStart, Command
 
-from src.filters.chat_types import ChatTypeFilter
-from src.keyboards.reply_keyboard import get_reply_keyboard
+from src.bot.filters.chat_types import ChatTypeFilter
+from src.bot.keyboards.reply_keyboard import get_reply_keyboard
 
 user_private_router = Router(name=__name__)
 user_private_router.message.filter(ChatTypeFilter(["private"]))
