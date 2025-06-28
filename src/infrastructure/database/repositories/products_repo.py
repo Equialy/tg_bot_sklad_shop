@@ -23,3 +23,13 @@ class ProductsRepoImpl:
         model = await self.session.execute(stmt)
         result = model.scalar_one()
         return ProductSchemaBase.model_validate(result)
+
+    async def delete(self, products_id) -> ProductSchemaBase:
+        stmt = (
+            sa.delete(self.model)
+            .where(self.model.id == products_id)
+            .returning(self.model)
+        )
+        execute = await self.session.execute(stmt)
+        result = execute.scalar_one()
+        return ProductSchemaBase.model_validate(result)

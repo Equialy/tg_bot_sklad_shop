@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bot.filters.chat_types import ChatTypeFilter, IsAdmin
 from src.bot.handlers.admin_handlers.handler_category import admin_router_category
+from src.bot.keyboards.inline_keyboards import get_callback_btns
 from src.bot.keyboards.reply_keyboard import get_reply_keyboard
 from src.bot.schemas.product_schema import ProductSchemaRead
 from src.bot.states.states import AddProduct
@@ -25,11 +26,17 @@ ADMIN_KB = get_reply_keyboard(
     placeholder="Выберите действие",
     size=(2, 1,),
 )
-
+ADMIN_INLINE_KB = get_callback_btns(
+    btns={"Добавить товар": "add_product",
+     "Добавить категорию": "add_category",
+     "Каталог": "catalog_products",
+     "Изменить товар": "update_product",
+     "Удалить товар": "delete_product" }
+)
 
 @admin_router.message(Command("admin"))
 async def admin_features(message: types.Message):
-    await message.answer("Что хотите сделать?", reply_markup=ADMIN_KB)
+    await message.answer("Что хотите сделать?", reply_markup=ADMIN_INLINE_KB)
 
 
 @admin_router.message(StateFilter('*'), Command("отмена"))
@@ -63,13 +70,22 @@ async def change_product(message: types.Message, state: FSMContext):
     await state.set_state(AddProduct.name)
     await message.answer(text="Введите название товара")
 
-@admin_router.message(StateFilter(None), F.text == "Каталог")
-async def change_product(message: types.Message, state: FSMContext, session: AsyncSession):
+@admin_router.callback_query(StateFilter(None), F.data.startswith("catalog_products"))
+async def change_product(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
     products = await ProductsRepoImpl(session=session).get_all()
-    await message.answer(text="<strong>Cписок товаров </strong>")
+    await callback.message.answer(text="<strong>Cписок товаров </strong>")
     for idx, product in enumerate(products, start=1):
-        await message.answer(f"{idx}  {product.name}\n {product.description}",
-                             reply_markup=types.ReplyKeyboardRemove())
+        await callback.answer()
+        await callback.message.answer(f"{idx}  {product.name}\n {product.description}",
+                             reply_markup=get_callback_btns(btns={"Удалить товар":f"delete_{product.id}"
+                                 ,"Изменить товар": f"update_{product.id}" }))
+
+@admin_router.callback_query(StateFilter(None), F.data.startswith("delete_"))
+async def delete_product(callback: types.CallbackQuery, session: AsyncSession):
+    data = callback.data.split("_")[-1]
+    product = await ProductsRepoImpl(session=session).delete(int(data))
+    await callback.answer()
+    await callback.message.answer(text=f"Товар <strong>{product.name}</strong> удален")
 
 
 

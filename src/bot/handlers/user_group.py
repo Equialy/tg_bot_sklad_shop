@@ -1,8 +1,9 @@
 from aiogram import Router, types, Bot, F
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandStart, or_f
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bot.filters.chat_types import ChatTypeFilter
+from src.bot.keyboards.inline_keyboards import get_callback_btns
 from src.bot.keyboards.reply_keyboard import get_reply_keyboard
 from src.infrastructure.database.repositories.products_repo import ProductsRepoImpl
 
@@ -27,14 +28,15 @@ async def get_admin(message: types.Message, bot: Bot):
 @user_group_router.message(CommandStart())
 async def start_handler(message: types.Message):
     await message.answer(text=f"Добро пожаловать {message.from_user.username} в Slad Shop")
-    await message.answer(text=f"Каталог товаров", reply_markup=get_reply_keyboard("Каталог", "Корзина"))
+    await message.answer(text=f"Каталог товаров",
+                         reply_markup=get_callback_btns(btns={"Каталог": "catalog", "Корзина": "carts"}))
 
 
-@user_group_router.message(Command("catalog"))
-@user_group_router.message(F.text == "Каталог")
-async def catalog_handler_group(message: types.Message, session: AsyncSession):
-    await message.answer(text="Каталог товаров:")
+@user_group_router.callback_query(or_f(Command("catalog"), (F.data)))
+async def catalog_handler_group(callback: types.CallbackQuery, session: AsyncSession):
+    await callback.message.answer(text="Каталог товаров:")
     products = await ProductsRepoImpl(session=session).get_all()
     for idx, product in enumerate(products, start=1):
-        await message.answer(f"{idx}  {product.name}\n {product.description}",
+        await callback.answer()
+        await callback.message.answer(f"{idx}  {product.name}\n {product.description}",
                              reply_markup=types.ReplyKeyboardRemove())
