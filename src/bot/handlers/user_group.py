@@ -45,7 +45,7 @@ async def start_handler(message: types.Message):
 async def categories_products(callback: types.CallbackQuery, session: AsyncSession):
     await callback.answer()
     categories = await CategoryRepositoryImpl(session=session).get_all()
-    await callback.message.answer(
+    await callback.message.edit_text(
         text="Категории",
         reply_markup=get_callback_btns(
             btns={f"{cat.name}": f"category_id_{cat.id}" for cat in categories}
@@ -61,7 +61,7 @@ async def get_products_by_category(
     products = await ProductsRepoImpl(session=session).get_by_category(
         int(callback.data.split("_")[-1])
     )
-    await callback.message.answer(
+    await callback.message.edit_text(
         text="Товары",
         reply_markup=get_callback_btns(
             btns={
