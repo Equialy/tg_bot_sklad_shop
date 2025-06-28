@@ -127,7 +127,7 @@ async def delete_product(message: types.Message, state: FSMContext):
 
 @admin_router.message(AddProduct.name, or_f(F.text, F.text == "далее"))
 async def add_name_product(message: types.Message, state: FSMContext):
-    if message.text == "далее":
+    if message.text.strip() == "далее" and AddProduct.product_for_update != None:
         await state.update_data(name=AddProduct.product_for_update.name)
     else:
         await state.update_data(name=message.text)
@@ -149,7 +149,7 @@ async def exc_name_product(message: types.Message, state: FSMContext):
 async def add_description_product(
     message: types.Message, state: FSMContext, session: AsyncSession
 ):
-    if message.text == "далее":
+    if message.text.strip() == "далее" and AddProduct.product_for_update != None:
         await state.update_data(description=AddProduct.product_for_update.description)
     else:
         await state.update_data(description=message.text)
@@ -168,7 +168,7 @@ async def exc_description_product(message: types.Message, state: FSMContext):
 @admin_router.message(AddProduct.category_id, or_f(F.text, F.text == "далее"))
 async def add_category_product(message: types.Message, state: FSMContext):
     text = message.text.strip()
-    if message.text == "далее":
+    if message.text.strip() == "далее" and AddProduct.product_for_update != None:
         await state.update_data(category_id=AddProduct.product_for_update.category_id)
     else:
         try:
@@ -196,7 +196,7 @@ async def exc_category_product(
 
 @admin_router.message(AddProduct.price, or_f(F.text, F.text == "далее"))
 async def add_price_product(message: types.Message, state: FSMContext):
-    if message.text == "далее":
+    if message.text.strip() == "далее" and AddProduct.product_for_update != None:
         ...  # TODO price for product variant
     else:
         await state.update_data(price=message.text)
@@ -212,7 +212,7 @@ async def exc_price_product(message: types.Message, state: FSMContext):
 @admin_router.message(AddProduct.photo, or_f(F.photo, F.text == "далее"))
 async def add_photo_product(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    if message.text == "далее":
+    if message.text == "далее" and AddProduct.product_for_update != None:
         ...  # TODO photo for product variant
         await state.set_state(AddProduct.update_confirmation)
         await message.answer(
@@ -223,14 +223,24 @@ async def add_photo_product(message: types.Message, state: FSMContext):
             reply_markup=get_reply_keyboard("✅ Да", "❌ Отмена"),
         )
     else:
-        await state.update_data(photo=message.photo[-1].file_id)
-        await message.answer(
-            f"Создать товар?\n\nНазвание: <b>{data["name"]}</b>"
-            f"\nОписание: <b>{data["description"]}</b>\n\n"
-            "✅ — Да, создать\n❌ — Отмена",
-            reply_markup=get_reply_keyboard("✅ Да", "❌ Отмена"),
-        )
-        await state.set_state(AddProduct.confirmation)
+        if AddProduct.product_for_update:
+            await state.set_state(AddProduct.update_confirmation)
+            await message.answer(
+                text=f"Изменить товар?\n\n"
+                f"Название: <b>{data["name"]}</b>"
+                f"\nОписание: <b>{data["description"]}</b>\n\n"
+                "✅ — Да, изменить\n❌ — Отмена",
+                reply_markup=get_reply_keyboard("✅ Да", "❌ Отмена"),
+            )
+        else:
+            await state.update_data(photo=message.photo[-1].file_id)
+            await message.answer(
+                f"Создать товар?\n\nНазвание: <b>{data["name"]}</b>"
+                f"\nОписание: <b>{data["description"]}</b>\n\n"
+                "✅ — Да, создать\n❌ — Отмена",
+                reply_markup=get_reply_keyboard("✅ Да", "❌ Отмена"),
+            )
+            await state.set_state(AddProduct.confirmation)
 
 
 @admin_router.message(AddProduct.photo)
