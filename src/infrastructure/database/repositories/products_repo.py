@@ -16,6 +16,12 @@ class ProductsRepoImpl:
         products = result.scalars().all()
         return [ProductSchemaBase.model_validate(row) for row in products]
 
+    async def get_by_category(self, category_id: int) -> list[ProductSchemaBase]:
+        stmt = sa.select(self.model).where(self.model.category_id == category_id)
+        result = await self.session.execute(stmt)
+        products = result.scalars().all()
+        return [ProductSchemaBase.model_validate(product) for product in products]
+
     async def get_by_id(self, product_id: int) -> ProductSchemaBase:
         query = (
             sa.select(self.model).where(self.model.id == product_id).with_for_update()

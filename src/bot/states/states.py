@@ -29,3 +29,14 @@ class AddCategoryProducts(StatesGroup):
     name = State()
     parent_id = State()
     confirmation = State()
+
+
+class AddItemProduct(StatesGroup):
+    product_id = State()
+    sku = State()
+    price = State()
+    stock = State()
+    description = State()
+    photo1 = State()
+    photo2 = State()
+    confirmation = State()

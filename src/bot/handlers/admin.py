@@ -5,12 +5,15 @@ from aiogram.utils import markdown
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bot.filters.chat_types import ChatTypeFilter, IsAdmin
+from src.bot.handlers.admin_handlers.add_item_product_model import (
+    admin_add_item_product,
+)
 from src.bot.handlers.admin_handlers.handler_category import admin_router_category
 from src.bot.handlers.admin_handlers.update_router import admin_router_update
 from src.bot.keyboards.inline_keyboards import get_callback_btns
 from src.bot.keyboards.reply_keyboard import get_reply_keyboard
 from src.bot.schemas.product_schema import ProductSchemaRead, ProductSchemaBase
-from src.bot.states.states import AddProduct
+from src.bot.states.states import AddProduct, AddItemProduct
 
 from src.infrastructure.database.repositories.categories_repo import (
     CategoryRepositoryImpl,
@@ -19,7 +22,9 @@ from src.infrastructure.database.repositories.products_repo import ProductsRepoI
 
 admin_router = Router(name=__name__)
 admin_router.message.filter(ChatTypeFilter(["private"]), IsAdmin())
-admin_router.include_routers(admin_router_category, admin_router_update)
+admin_router.include_routers(
+    admin_router_category, admin_router_update, admin_add_item_product
+)
 
 ADMIN_KB = get_reply_keyboard(
     "Добавить товар",
@@ -39,7 +44,7 @@ ADMIN_INLINE_KB = get_callback_btns(
         "Добавить категорию": "add_category",
         "Каталог": "catalog_products",
         "Изменить товар": "update_product",
-        "Удалить товар": "delete_product",
+        "Добавить товар по модели": "add_item_product",
     }
 )
 
@@ -77,6 +82,21 @@ async def back_state_handler(message: types.Message, state: FSMContext):
                 f"Вы вернулись к предыдущему шагу \n {AddProduct.texts[previous.state]}"
             )
         previous = step
+
+
+@admin_router.callback_query(StateFilter(None), F.data == "add_item_product")
+async def add_item_product(
+    callback: types.CallbackQuery, state: FSMContext, session: AsyncSession
+):
+    await callback.answer()
+    await state.set_state(AddItemProduct.product_id)
+    products = await ProductsRepoImpl(session=session).get_all()
+    await callback.message.answer(
+        text=f"Выберите название продукта",
+        reply_markup=get_callback_btns(
+            btns={f"{product.name}": f"product_id_{product.id}" for product in products}
+        ),
+    )
 
 
 @admin_router.callback_query(StateFilter(None), F.data.startswith("add_product"))
@@ -129,6 +149,12 @@ async def delete_product(message: types.Message, state: FSMContext):
 async def add_name_product(message: types.Message, state: FSMContext):
     if message.text.strip() == "далее" and AddProduct.product_for_update != None:
         await state.update_data(name=AddProduct.product_for_update.name)
+    if message.text.strip() == "далее" and AddProduct.product_for_update == None:
+        await message.answer(
+            text="Вы сейчас не в измененнии товара", reply_markup=ADMIN_INLINE_KB
+        )
+        await state.clear()
+        return
     else:
         await state.update_data(name=message.text)
     await message.answer(
@@ -154,9 +180,10 @@ async def add_description_product(
     else:
         await state.update_data(description=message.text)
     cats = await CategoryRepositoryImpl(session=session).get_all()
+    buttons = [f"{cat.id} — {cat.name}" for cat in cats]
     await state.set_state(AddProduct.category_id)
     await message.answer(
-        text="Выберите категорию", reply_markup=get_reply_keyboard(*cats, size=(2,))
+        text="Выберите категорию", reply_markup=get_reply_keyboard(*buttons, size=(2,))
     )
 
 

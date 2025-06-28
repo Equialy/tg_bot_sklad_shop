@@ -5,33 +5,38 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bot.filters.chat_types import ChatTypeFilter, IsAdmin
 from src.bot.keyboards.reply_keyboard import get_reply_keyboard
-from src.bot.states.states import  AddCategoryProducts
+from src.bot.states.states import AddCategoryProducts
 
 from src.infrastructure.database.models.products_model import Category
-from src.infrastructure.database.repositories.categories_repo import CategoryRepositoryImpl
+from src.infrastructure.database.repositories.categories_repo import (
+    CategoryRepositoryImpl,
+)
 
 admin_router_category = Router(name=__name__)
 admin_router_category.message.filter(ChatTypeFilter(["private"]), IsAdmin())
 
 
-@admin_router_category.message(StateFilter(None), F.text == "Добавить категорию")
-async def add_category(message: types.Message, state: FSMContext):
-    await message.answer(text="Введите название категории")
+@admin_router_category.callback_query(StateFilter(None), F.data == "add_category")
+async def add_category(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await callback.message.answer(text="Введите название категории")
     await state.set_state(AddCategoryProducts.name)
 
 
 @admin_router_category.message(AddCategoryProducts.name)
-async def add_name_category(message: types.Message, state: FSMContext, session:AsyncSession):
+async def add_name_category(
+    message: types.Message, state: FSMContext, session: AsyncSession
+):
     await state.update_data(name=message.text)
-    cats = CategoryRepositoryImpl(session=session).get_all()
+    cats = await CategoryRepositoryImpl(session=session).get_all()
+    buttons = [f"{c.id} — {c.name}" for c in cats]
+    buttons.append("Без родителя")
 
-
-    # cats = await session.execute(sa.select(Category.id, Category.name))
-    # categories = [f"{row.id} — {row.name}" for row in cats]
     await state.set_state(AddCategoryProducts.parent_id)
-    await message.answer("Выберите родительскую категорию или нажмите «Без родителя»:",
-                         reply_markup=get_reply_keyboard(*cats, "Без родителя", size=(2,))
-                         )
+    await message.answer(
+        "Выберите родительскую категорию или нажмите «Без родителя»:",
+        reply_markup=get_reply_keyboard(*buttons, size=(2,)),
+    )
 
 
 @admin_router_category.message(AddCategoryProducts.parent_id)
@@ -55,7 +60,9 @@ async def process_parent(message: types.Message, state: FSMContext):
 
 
 @admin_router_category.message(AddCategoryProducts.confirmation)
-async def process_confirmation(message: types.Message, state: FSMContext, session:AsyncSession):
+async def process_confirmation(
+    message: types.Message, state: FSMContext, session: AsyncSession
+):
     if message.text == "✅ Да":
         data = await state.get_data()
         new_cat = Category(
@@ -63,8 +70,12 @@ async def process_confirmation(message: types.Message, state: FSMContext, sessio
             parent_id=data["parent_id"],
         )
         session.add(new_cat)
-        await message.answer("Категория успешно создана!", reply_markup=types.ReplyKeyboardRemove())
+        await message.answer(
+            "Категория успешно создана!", reply_markup=types.ReplyKeyboardRemove()
+        )
     else:
-        await message.answer("Создание категории отменено.", reply_markup=types.ReplyKeyboardRemove())
+        await message.answer(
+            "Создание категории отменено.", reply_markup=types.ReplyKeyboardRemove()
+        )
 
     await state.clear()

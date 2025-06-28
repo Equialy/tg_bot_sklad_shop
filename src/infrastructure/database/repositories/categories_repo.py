@@ -3,15 +3,14 @@ from typing import Protocol
 from sqlalchemy.ext.asyncio import AsyncSession
 import sqlalchemy as sa
 
+from src.bot.schemas.category_schema import CategorySchemaBase
 from src.infrastructure.database.models.products_model import Category
 
 
 class CategoryRepositoryProtocol(Protocol):
-    async def get_all(self) -> list:
-        ...
+    async def get_all(self) -> list: ...
 
-    async def add(self, *kwargs):
-        ...
+    async def add(self, *kwargs): ...
 
 
 class CategoryRepositoryImpl(CategoryRepositoryProtocol):
@@ -19,13 +18,11 @@ class CategoryRepositoryImpl(CategoryRepositoryProtocol):
         self.session = session
         self.model = Category
 
-    async def get_all(self) -> list:
-        stmt = (
-            sa.select(self.model)
-        )
+    async def get_all(self) -> list[CategorySchemaBase]:
+        stmt = sa.select(self.model)
         result = await self.session.execute(stmt)
         cats = result.scalars().all()
-        return [f"{row.id} — {row.name}" for row in cats]
+        return [CategorySchemaBase.model_validate(row) for row in cats]
 
     async def add(self, *kwargs):
         stmt = sa.insert(self.model).values(**kwargs).returning(self.model)
