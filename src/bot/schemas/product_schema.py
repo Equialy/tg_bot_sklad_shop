@@ -4,9 +4,9 @@ from pydantic import ConfigDict, AliasGenerator, BaseModel, Field
 
 
 class ProductSchemaRead(BaseModel):
-    name: str
-    description: str
-    category_id: int
+    name: str = None
+    description: str = None
+    category_id: int = None
 
     model_config = ConfigDict(from_attributes=True)
 
