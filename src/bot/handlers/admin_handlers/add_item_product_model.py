@@ -113,9 +113,7 @@ async def add_photo_product(message: types.Message, state: FSMContext):
     await message.answer(text="Введены не корректные данные. Добавте фото")
 
 
-@admin_add_item_product.message(
-    AddItemProduct.sku, or_f((F.photo), (F.text == "далее"))
-)
+@admin_add_item_product.message(AddItemProduct.sku, or_f((F.text), (F.text == "далее")))
 async def add_sku_item(message: types.Message, state: FSMContext):
     if message.text.strip() == "далее" and AddItemProduct.item_for_update != None:
         await state.update_data(sku=AddItemProduct.item_for_update.sku)
