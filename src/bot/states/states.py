@@ -1,6 +1,7 @@
 from aiogram.fsm.state import StatesGroup, State
 
 from src.bot.schemas.product_schema import ProductSchemaBase
+from src.bot.schemas.variant_schema import VariantSchemaBase
 
 
 class AddProduct(StatesGroup):
@@ -39,4 +40,13 @@ class AddItemProduct(StatesGroup):
     description = State()
     photo1 = State()
     photo2 = State()
+    item_for_update: VariantSchemaBase | None = None
+    confirmation = State()
+    update_confirmation = State()
+
+
+class AddBanner(StatesGroup):
+    name = State()
+    description = State()
+    image = State()
     confirmation = State()

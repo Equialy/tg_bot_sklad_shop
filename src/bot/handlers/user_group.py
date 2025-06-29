@@ -93,7 +93,6 @@ async def get_info_by_product(callback: types.CallbackQuery, session: AsyncSessi
             reply_markup=get_callback_btns(
                 btns={
                     "Добавить в корзину": f"add_to_cart_{item.id}",
-                    f"Модель": f"category_id_{item.product_id}",
                 }
             ),
         )
