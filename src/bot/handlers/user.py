@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.bot.filters.chat_types import ChatTypeFilter
 from src.bot.keyboards.inline_keyboards import get_callback_btns
 from src.infrastructure.database.repositories.banner_repo import BannerRepoImpl
+from src.infrastructure.database.repositories.cart_repo import CartRepoImpl
 from src.infrastructure.database.repositories.categories_repo import (
     CategoryRepositoryImpl,
 )
@@ -36,11 +37,10 @@ async def categories_products(callback: types.CallbackQuery, session: AsyncSessi
         media=catalog_photo.image,
         caption=catalog_photo.description,
     )
+    btns = {f"{cat.name}": f"category_id_{cat.id}" for cat in categories}
     await callback.message.edit_media(
         media=media,
-        reply_markup=get_callback_btns(
-            btns={f"{cat.name}": f"category_id_{cat.id}" for cat in categories}
-        ),
+        reply_markup=get_callback_btns(btns=btns),
     )
 
 
@@ -60,15 +60,14 @@ async def get_products_by_category(
         text=media_photo.description,
         caption=media_photo.description,
     )
+    btns = {
+        f"{product.name}": f"product_id_for_item_{product.id}" for product in products
+    }
+    btns["⬅ Назад"] = "catalog"
     await callback.message.edit_media(
         media=media,
         text="Товары",
-        reply_markup=get_callback_btns(
-            btns={
-                f"{product.name}": f"product_id_for_item_{product.id}"
-                for product in products
-            }
-        ),
+        reply_markup=get_callback_btns(btns=btns),
     )
 
 
@@ -89,13 +88,12 @@ async def get_info_by_product(callback: types.CallbackQuery, session: AsyncSessi
             f"ID product: {markdown.hbold(item.product_id)}\n",
         )
 
-        # await callback.message.answer_media_group(media=media)
-
         await callback.message.edit_media(
             media=media,
             reply_markup=get_callback_btns(
                 btns={
                     "Добавить в корзину": f"add_to_cart_{item.id}",
+                    "⬅ Каталог": f"catalog",
                 }
             ),
         )
@@ -104,7 +102,12 @@ async def get_info_by_product(callback: types.CallbackQuery, session: AsyncSessi
 @user_private_router.callback_query(F.data.startswith("add_to_cart_"))
 async def add_to_cart(callback: types.CallbackQuery, session: AsyncSession):
     await callback.answer()
-    ...
+    add_cart = await CartRepoImpl(session=session).add_to_cart(
+        user_id=callback.from_user.id,
+        variant_id=int(callback.data.split("_")[-1]),
+        username=callback.from_user.username,
+    )
+    await callback.answer(text="Товар добавлен в корзину", show_alert=True)
 
 
 @user_private_router.callback_query(

@@ -7,11 +7,13 @@ from alembic import context
 
 from src.config.config import setting
 from src.infrastructure.database.connection import Base
-from src.infrastructure.database.models.cart_model import Cart, CartItem
-from src.infrastructure.database.models.order_model import Order, OrderItem
-from src.infrastructure.database.models.users_model import Users
-from src.infrastructure.database.models.products_model import Product, Category, Variant
-from src.infrastructure.database.models.banner_model import Banner
+import src.infrastructure.database.models
+
+# from src.infrastructure.database.models.cart_model import Cart, CartItem
+# from src.infrastructure.database.models.order_model import Order, OrderItem
+# from src.infrastructure.database.models.users_model import Users
+# from src.infrastructure.database.models.products_model import Product, Category, Variant
+# from src.infrastructure.database.models.banner_model import Banner
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

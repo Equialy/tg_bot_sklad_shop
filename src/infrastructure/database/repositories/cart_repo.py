@@ -3,6 +3,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
 
 from src.bot.schemas.cart_schema import CartSchemaBase, CartItemSchemaBase
+from src.infrastructure.database.models import Users
 from src.infrastructure.database.models.cart_model import Cart, CartItem
 from src.infrastructure.database.models.products_model import Variant
 
@@ -12,33 +13,53 @@ class CartRepoImpl:
         self.session = session
         self.model = Cart
 
-    async def add_to_cart(self, user_id: int, variant_id: int) -> CartSchemaBase:
-        # 1) Найти или создать корзину пользователя
-        cart_stmt = sa.select(self.model).where(self.model.user_id == user_id)
-        cart_res = await self.session.execute(cart_stmt)
-        cart = cart_res.scalar_one_or_none()
-
-        if cart is None:
-            cart = Cart(user_id=user_id)
-            self.session.add(cart)
-            # flush, чтобы получить cart.id
+    async def add_to_cart(
+        self, user_id: int, variant_id: int, username: str | None = None
+    ):
+        # 1) Найти/создать пользователя
+        stmt_user = (
+            sa.select(Users).where(Users.telegram_id == str(user_id)).with_for_update()
+        )
+        res_user = await self.session.execute(stmt_user)
+        user = res_user.scalars().first()
+        if not user:
+            user = Users(telegram_id=str(user_id), name=username)
+            self.session.add(user)
             await self.session.flush()
 
-        # 2) Найти элемент в cart_items по variant_id
-        item_stmt = sa.select(CartItem).where(
+        # 2) Найти/создать корзину
+        stmt_cart = sa.select(Cart).where(Cart.user_id == user.id)
+        res_cart = await self.session.execute(stmt_cart)
+        cart = res_cart.scalars().first()
+        if not cart:
+            cart = Cart(user_id=user.id)
+            self.session.add(cart)
+            await self.session.flush()
+
+        # 3) Захватить вариант для обновления остатка
+        stmt_var = sa.select(Variant).where(Variant.id == variant_id).with_for_update()
+        res_var = await self.session.execute(stmt_var)
+        variant = res_var.scalar_one()
+
+        if variant.stock <= 0:
+            raise ValueError("Товар отсутствует на складе")
+        variant.stock -= 1
+
+        # 4) Добавить или обновить CartItem
+        stmt_item = sa.select(CartItem).where(
             CartItem.cart_id == cart.id, CartItem.variant_id == variant_id
         )
-        item_res = await self.session.execute(item_stmt)
-        item = item_res.scalar_one_or_none()
+        res_item = await self.session.execute(stmt_item)
+        item = res_item.scalar_one_or_none()
 
         if item:
-            # позиция уже в корзине — увеличиваем количество
             item.quantity += 1
         else:
-            # новая позиция
             item = CartItem(cart_id=cart.id, variant_id=variant_id, quantity=1)
             self.session.add(item)
 
+        # 5) Сохранить всё одной транзакцией
+        await self.session.commit()
         return CartSchemaBase.model_validate(cart)
 
     async def get_user_cart_products(self, user_id: int) -> list[CartItemSchemaBase]:
