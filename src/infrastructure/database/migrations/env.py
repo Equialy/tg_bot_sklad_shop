@@ -10,7 +10,9 @@ from src.infrastructure.database.connection import Base
 from src.infrastructure.database.models.cart_model import Cart, CartItem
 from src.infrastructure.database.models.order_model import Order, OrderItem
 from src.infrastructure.database.models.users_model import Users
-from src.infrastructure.database.models.products_model import Product,Category,Variant
+from src.infrastructure.database.models.products_model import Product, Category, Variant
+from src.infrastructure.database.models.banner_model import Banner
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -71,9 +73,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

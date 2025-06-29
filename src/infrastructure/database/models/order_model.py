@@ -1,8 +1,7 @@
-from datetime import date, datetime
-from decimal import Decimal
+from datetime import datetime
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, CheckConstraint, Text, Numeric, ForeignKey, Integer
+from sqlalchemy import String, Numeric, ForeignKey, Integer
 from sqlalchemy import DateTime, func
 
 from src.infrastructure.database.connection import Base
@@ -32,6 +31,7 @@ class Order(Base):
 
     def __str__(self):
         return f"Order {self.id}"
+
 
 class OrderItem(Base):
     __tablename__ = "order_items"
