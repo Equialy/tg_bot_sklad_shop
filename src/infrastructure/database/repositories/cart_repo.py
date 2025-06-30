@@ -14,16 +14,18 @@ class CartRepoImpl:
         self.model = Cart
 
     async def add_to_cart(
-        self, user_id: int, variant_id: int, username: str | None = None
+        self, user_telegram_id: int, variant_id: int, username: str | None = None
     ):
         # 1) Найти/создать пользователя
         stmt_user = (
-            sa.select(Users).where(Users.telegram_id == user_id).with_for_update()
+            sa.select(Users)
+            .where(Users.telegram_id == user_telegram_id)
+            .with_for_update()
         )
         res_user = await self.session.execute(stmt_user)
         user = res_user.scalars().first()
         if not user:
-            user = Users(telegram_id=str(user_id), name=username)
+            user = Users(telegram_id=str(user_telegram_id), name=username)
             self.session.add(user)
             await self.session.flush()
 
@@ -62,27 +64,42 @@ class CartRepoImpl:
         await self.session.commit()
         return CartSchemaBase.model_validate(cart)
 
-    async def get_user_cart_products(self, user_id: int) -> list[CartItemSchemaBase]:
+    async def get_user_cart_products(
+        self, telegram_id: int
+    ) -> list[CartItemSchemaBase]:
+        res = await self.session.execute(
+            sa.select(Users.id)
+            .where(Users.telegram_id == telegram_id)
+            .with_for_update()
+        )
+        user_pk = res.scalar_one_or_none()
+        if not user_pk:
+            return []
         # Строим запрос: из cart_items через join на carts по user_id
         stmt = (
             sa.select(CartItem)
             .join(Cart, CartItem.cart_id == Cart.id)
-            .where(Cart.user_id == user_id)
-            # Подгружаем навигационные свойства, если они понадобятся в схемах:
+            .where(Cart.user_id == user_pk)
             .options(
                 joinedload(CartItem.cart),
                 joinedload(CartItem.variant).joinedload(Variant.product),
             )
         )
         result = await self.session.execute(stmt)
-        items: list[CartItem] = result.scalars().all()
+        items = result.scalars().all()
         return [CartItemSchemaBase.model_validate(item) for item in items]
 
     async def remove_item_from_cart(
         self, user_id: int, variant_id: int
-    ) -> CartItemSchemaBase | bool:
+    ) -> CartItemSchemaBase | bool | list:
+        res = await self.session.execute(
+            sa.select(Users.id).where(Users.telegram_id == user_id).with_for_update()
+        )
+        user_pk = res.scalar_one_or_none()
+        if not user_pk:
+            return []
         # Сначала найдём саму корзину, чтобы получить её id
-        cart_stmt = sa.select(Cart.id).where(Cart.user_id == user_id)
+        cart_stmt = sa.select(Cart.id).where(Cart.user_id == user_pk)
         cart_res = await self.session.execute(cart_stmt)
         cart_id = cart_res.scalar_one_or_none()
         if cart_id is None:
@@ -100,7 +117,9 @@ class CartRepoImpl:
         deleted = res.scalars().all()
         return CartItemSchemaBase.model_validate(deleted)
 
-    async def reduce_item_quantity(self, user_id: int, variant_id: int) -> bool | None:
+    async def reduce_item_quantity(
+        self, user_id: int, variant_id: int
+    ) -> bool | None | bool:
         """
         Уменьшает количество variant_id в корзине user_id на 1.
         Если после уменьшения количество == 0, удаляет позицию.
@@ -109,11 +128,17 @@ class CartRepoImpl:
           - False — позиция удалена (количество было 1)
           - None  — позиции не было изначально
         """
+        res = await self.session.execute(
+            sa.select(Users.id).where(Users.telegram_id == user_id).with_for_update()
+        )
+        user_pk = res.scalar_one_or_none()
+        if not user_pk:
+            return []
         # 1) Найдём позицию в cart_items через join на carts по user_id
         stmt = (
             sa.select(CartItem)
             .join(Cart, CartItem.cart_id == Cart.id)
-            .where(Cart.user_id == user_id, CartItem.variant_id == variant_id)
+            .where(Cart.user_id == user_pk, CartItem.variant_id == variant_id)
         )
         result = await self.session.execute(stmt)
         item: CartItem | None = result.scalar_one_or_none()

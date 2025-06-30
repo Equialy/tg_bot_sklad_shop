@@ -36,9 +36,9 @@ async def add_to_cart(
 ):
     user = callback.from_user
     await CartRepoImpl(session=session).add_to_cart(
-        user_id=user.id, variant_id=callback_data.item_id
+        user_telegram_id=user.id, variant_id=callback_data.item_id
     )
-    await callback.answer("Товар добавлен в корзину.")
+    await callback.answer(text="Товар добавлен в корзину.", show_alert=True)
 
 
 @user_private_router.callback_query(MenuCallBack.filter())
@@ -49,7 +49,6 @@ async def user_menu(
     if callback_data.menu_name == "add_to_cart":
         await add_to_cart(callback, callback_data, session)
         return
-
     media, reply_markup = await get_menu_content(
         session,
         level=callback_data.level,
@@ -59,6 +58,7 @@ async def user_menu(
         product_id=callback_data.product_id,
         user_id=callback.from_user.id,
         item_id=callback_data.item_id,
+        username=callback_data.username,
     )
 
     await callback.message.edit_media(media=media, reply_markup=reply_markup)

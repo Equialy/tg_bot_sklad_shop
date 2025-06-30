@@ -20,6 +20,7 @@ from src.infrastructure.database.repositories.variant_repo import VariantReposit
 
 
 async def main_menu(session, level, menu_name):
+    print(menu_name)
     banner = await BannerRepoImpl(session=session).get_banner(page=menu_name)
     image = InputMediaPhoto(media=banner.image, caption=banner.description)
 
@@ -100,26 +101,37 @@ async def items(session, level, product_id, page):
     return image, kbds
 
 
-async def carts(session, level, menu_name, page, user_id, item_id):
+async def carts(
+    session,
+    level,
+    menu_name,
+    page,
+    user_id,
+    variant_id,
+):
     if menu_name == "delete":
         await CartRepoImpl(session=session).remove_item_from_cart(
-            user_id, variant_id=item_id
+            user_id=user_id, variant_id=variant_id
         )
         if page > 1:
             page -= 1
     elif menu_name == "decrement":
         is_cart = await CartRepoImpl(session=session).reduce_item_quantity(
-            user_id=user_id, variant_id=item_id
+            user_id=user_id, variant_id=variant_id
         )
         if page > 1 and not is_cart:
             page -= 1
     elif menu_name == "increment":
-        await CartRepoImpl(session=session).add_to_cart(user_id, variant_id=item_id)
+        await CartRepoImpl(session=session).add_to_cart(
+            user_telegram_id=user_id, variant_id=variant_id
+        )
 
-    carts = await CartRepoImpl(session=session).get_user_cart_products(user_id)
+    carts = await CartRepoImpl(session=session).get_user_cart_products(
+        telegram_id=user_id
+    )
 
     if not carts:
-        banner = await BannerRepoImpl(session=session).get_banner("cart")
+        banner = await BannerRepoImpl(session=session).get_banner(page="carts")
         image = InputMediaPhoto(
             media=banner.image, caption=f"<strong>{banner.description}</strong>"
         )
@@ -136,13 +148,13 @@ async def carts(session, level, menu_name, page, user_id, item_id):
 
         cart = paginator.get_page()[0]
 
-        cart_price = round(cart.quantity * cart.product.price, 2)
+        cart_price = round(cart.quantity * cart.variant.price, 2)
         total_price = round(
-            sum(cart.quantity * cart.product.price for cart in carts), 2
+            sum(cart.quantity * cart.variant.price for cart in carts), 2
         )
         image = InputMediaPhoto(
-            media=cart.product.image,
-            caption=f"<strong>{cart.product.name}</strong>\n{cart.product.price}$ x {cart.quantity} = {cart_price}$\
+            media=cart.variant.photo1,
+            caption=f"<strong>{cart.variant.description}</strong>\n{cart.variant.price}$ x {cart.quantity} = {cart_price}$\
                     \nТовар {paginator.page} из {paginator.pages} в корзине.\nОбщая стоимость товаров в корзине {total_price}",
         )
 
@@ -152,7 +164,7 @@ async def carts(session, level, menu_name, page, user_id, item_id):
             level=level,
             page=page,
             pagination_btns=pagination_btns,
-            product_id=cart.product.id,
+            item_id=cart.variant.id,
         )
 
     return image, kbds

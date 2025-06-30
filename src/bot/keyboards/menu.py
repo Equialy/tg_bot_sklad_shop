@@ -12,6 +12,7 @@ async def get_menu_content(
     page: int | None = None,
     user_id: int | None = None,
     item_id: int | None = None,
+    username: str | None = None,
 ):
 
     if level == 0:
@@ -25,4 +26,11 @@ async def get_menu_content(
             session=session, level=level, page=page, product_id=product_id
         )
     elif level == 4:
-        return await carts(session, level, menu_name, page, user_id, item_id=item_id)
+        return await carts(
+            session=session,
+            level=level,
+            menu_name=menu_name,
+            page=page,
+            user_id=user_id,
+            variant_id=item_id,
+        )

@@ -12,6 +12,7 @@ class MenuCallBack(CallbackData, prefix="menu"):
     page: int = 1
     product_id: int | None = None
     item_id: int | None = None
+    username: str | None = None
 
 
 def get_user_main_btns(*, level: int, sizes: tuple[int] = (2,)):
@@ -51,7 +52,7 @@ def get_user_catalog_btns(*, level: int, categories: list, sizes: tuple[int] = (
     )
     keyboard.button(
         text="Корзина 🛒",
-        callback_data=MenuCallBack(level=3, menu_name="carts").pack(),
+        callback_data=MenuCallBack(level=4, menu_name="carts").pack(),
     )
     for c in categories:
         keyboard.button(
@@ -73,7 +74,7 @@ def get_products_models_btns(
         callback_data=MenuCallBack(level=level - 1, menu_name="catalog").pack(),
     )
     keyboard.button(
-        text="Корзина 🛒", callback_data=MenuCallBack(level=3, menu_name="carts").pack()
+        text="Корзина 🛒", callback_data=MenuCallBack(level=4, menu_name="carts").pack()
     )
     for p in product_id:
         keyboard.button(
@@ -95,7 +96,7 @@ def get_items_btns(
         callback_data=MenuCallBack(level=level - 2, menu_name="catalog").pack(),
     )
     keyboard.button(
-        text="Корзина 🛒", callback_data=MenuCallBack(level=3, menu_name="cart").pack()
+        text="Корзина 🛒", callback_data=MenuCallBack(level=4, menu_name="cart").pack()
     )
     keyboard.button(
         text="Купить 💵",
@@ -200,7 +201,7 @@ def get_user_cart(
             ),
             InlineKeyboardButton(
                 text="Заказать",
-                callback_data=MenuCallBack(level=0, menu_name="order").pack(),
+                callback_data=MenuCallBack(level=6, menu_name="order").pack(),
             ),
         ]
         return keyboard.row(*row2).as_markup()
