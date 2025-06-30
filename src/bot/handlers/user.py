@@ -74,14 +74,11 @@ async def payment_handler(callback: types.CallbackQuery, session: AsyncSession):
         amount=setting.payment.price, telegram_id=callback.from_user.id
     )
     builder = InlineKeyboardBuilder()
-    builder.button(text="Оплатить",
-                   url=f"{payment_url}")
-    builder.button(text="Проверить оплату",callback_data=f"check_{payment_id}")
+    builder.button(text="Оплатить", url=f"{payment_url}")
+    builder.button(text="Проверить оплату", callback_data=f"check_{payment_id}")
 
     await callback.message.answer(
-        text=f"Оплата через Юкасса"
-             f"{payment_url} "
-             f"\nID платежа: {payment_id}",
+        text=f"Оплата через Юкасса" f"{payment_url} " f"\nID платежа: {payment_id}",
         reply_markup=builder.as_markup(),
     )
 
@@ -89,12 +86,12 @@ async def payment_handler(callback: types.CallbackQuery, session: AsyncSession):
 @user_private_router.callback_query(F.data.startswith("check"))
 async def check_handler(callback: types.CallbackQuery, session: AsyncSession):
     result = await check_payment(payment_id=callback.data.split("_")[-1])
-    print(result)
     if result:
         await callback.message.answer(text="Оплата еще не прошла")
 
     else:
         await callback.message.answer(text="Оплата прошла успешно")
+    await callback.answer()
 
 
 #

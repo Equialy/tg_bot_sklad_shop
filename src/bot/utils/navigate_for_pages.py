@@ -20,7 +20,6 @@ from src.infrastructure.database.repositories.variant_repo import VariantReposit
 
 
 async def main_menu(session, level, menu_name):
-    print(menu_name)
     banner = await BannerRepoImpl(session=session).get_banner(page=menu_name)
     image = InputMediaPhoto(media=banner.image, caption=banner.description)
 
