@@ -8,12 +8,14 @@ from src.bot.filters.chat_types import ChatTypeFilter
 from src.bot.keyboards.inline_common_buttons import get_callback_btns
 from src.bot.keyboards.inline_keyboards import MenuCallBack
 from src.bot.keyboards.menu import get_menu_content
+from src.bot.schemas.user_schema import UserSchemaRead
 from src.infrastructure.database.repositories.banner_repo import BannerRepoImpl
 from src.infrastructure.database.repositories.cart_repo import CartRepoImpl
 from src.infrastructure.database.repositories.categories_repo import (
     CategoryRepositoryImpl,
 )
 from src.infrastructure.database.repositories.products_repo import ProductsRepoImpl
+from src.infrastructure.database.repositories.user_repo import UserRepoImpl
 from src.infrastructure.database.repositories.variant_repo import VariantRepositoryImpl
 
 user_private_router = Router(name=__name__)
@@ -29,14 +31,24 @@ async def start_handler(message: types.Message, session: AsyncSession):
     )
 
 
+async def add_to_cart(
+    callback: types.CallbackQuery, callback_data: MenuCallBack, session: AsyncSession
+):
+    user = callback.from_user
+    await CartRepoImpl(session=session).add_to_cart(
+        user_id=user.id, variant_id=callback_data.item_id
+    )
+    await callback.answer("Товар добавлен в корзину.")
+
+
 @user_private_router.callback_query(MenuCallBack.filter())
 async def user_menu(
     callback: types.CallbackQuery, callback_data: MenuCallBack, session: AsyncSession
 ):
 
-    # if callback_data.menu_name == "add_to_cart":
-    #     await add_to_cart(callback, callback_data, session)
-    #     return
+    if callback_data.menu_name == "add_to_cart":
+        await add_to_cart(callback, callback_data, session)
+        return
 
     media, reply_markup = await get_menu_content(
         session,
@@ -46,6 +58,7 @@ async def user_menu(
         page=callback_data.page,
         product_id=callback_data.product_id,
         user_id=callback.from_user.id,
+        item_id=callback_data.item_id,
     )
 
     await callback.message.edit_media(media=media, reply_markup=reply_markup)

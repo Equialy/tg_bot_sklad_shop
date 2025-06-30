@@ -12,7 +12,7 @@ class Users(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    telegram_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    telegram_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
     name: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     orders: Mapped[list["Order"]] = relationship(

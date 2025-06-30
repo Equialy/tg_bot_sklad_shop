@@ -18,7 +18,7 @@ class CartRepoImpl:
     ):
         # 1) Найти/создать пользователя
         stmt_user = (
-            sa.select(Users).where(Users.telegram_id == str(user_id)).with_for_update()
+            sa.select(Users).where(Users.telegram_id == user_id).with_for_update()
         )
         res_user = await self.session.execute(stmt_user)
         user = res_user.scalars().first()

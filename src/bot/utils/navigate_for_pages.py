@@ -5,11 +5,13 @@ from src.bot.keyboards.inline_keyboards import (
     get_user_catalog_btns,
     get_products_models_btns,
     get_items_btns,
+    get_user_cart,
 )
 from src.bot.schemas.product_schema import ProductSchemaBase
 from src.bot.schemas.variant_schema import VariantSchemaBase
 from src.bot.utils.paginate import Paginator
 from src.infrastructure.database.repositories.banner_repo import BannerRepoImpl
+from src.infrastructure.database.repositories.cart_repo import CartRepoImpl
 from src.infrastructure.database.repositories.categories_repo import (
     CategoryRepositoryImpl,
 )
@@ -98,22 +100,26 @@ async def items(session, level, product_id, page):
     return image, kbds
 
 
-async def carts(session, level, menu_name, page, user_id, product_id):
+async def carts(session, level, menu_name, page, user_id, item_id):
     if menu_name == "delete":
-        await orm_delete_from_cart(session, user_id, product_id)
+        await CartRepoImpl(session=session).remove_item_from_cart(
+            user_id, variant_id=item_id
+        )
         if page > 1:
             page -= 1
     elif menu_name == "decrement":
-        is_cart = await orm_reduce_product_in_cart(session, user_id, product_id)
+        is_cart = await CartRepoImpl(session=session).reduce_item_quantity(
+            user_id=user_id, variant_id=item_id
+        )
         if page > 1 and not is_cart:
             page -= 1
     elif menu_name == "increment":
-        await orm_add_to_cart(session, user_id, product_id)
+        await CartRepoImpl(session=session).add_to_cart(user_id, variant_id=item_id)
 
-    carts = await orm_get_user_carts(session, user_id)
+    carts = await CartRepoImpl(session=session).get_user_cart_products(user_id)
 
     if not carts:
-        banner = await orm_get_banner(session, "cart")
+        banner = await BannerRepoImpl(session=session).get_banner("cart")
         image = InputMediaPhoto(
             media=banner.image, caption=f"<strong>{banner.description}</strong>"
         )
@@ -122,7 +128,7 @@ async def carts(session, level, menu_name, page, user_id, product_id):
             level=level,
             page=None,
             pagination_btns=None,
-            product_id=None,
+            item_id=None,
         )
 
     else:
