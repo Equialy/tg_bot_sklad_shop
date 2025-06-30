@@ -18,6 +18,10 @@ user_private_router = Router(name=__name__)
 user_private_router.message.filter(ChatTypeFilter(["private"]))
 
 
+# @user_private_router.message(CommandStart())
+# async def start_handler(message: types.Message, session: AsyncSession): ...
+
+
 @user_private_router.message(CommandStart())
 async def start_handler(message: types.Message, session: AsyncSession):
     main_photo = await BannerRepoImpl(session=session).get_banner(page="main")

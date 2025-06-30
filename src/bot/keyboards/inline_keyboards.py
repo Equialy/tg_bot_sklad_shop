@@ -40,6 +40,7 @@ ADMIN_INLINE_KB = get_callback_btns(
         "Добавить категорию": "add_category",
         "Каталог моделей": "catalog_products",
         "Добавить товар по модели": "add_item_product",
-        "Добавить баннер": "add_banner",
+        "Добавить/изменить баннер": "add_banner",
+        "Удалить баннер": "delete_banner",
     }
 )

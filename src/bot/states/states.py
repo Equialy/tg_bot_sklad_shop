@@ -50,3 +50,8 @@ class AddBanner(StatesGroup):
     description = State()
     image = State()
     confirmation = State()
+
+
+class DeleteBanner(StatesGroup):
+    name = State()
+    confirmation = State()

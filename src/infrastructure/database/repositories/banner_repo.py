@@ -18,21 +18,25 @@ class BannerRepoImpl:
         result = model.scalar_one()
         return BannerSchemaBase.model_validate(result)
 
-    async def update_banner_image(self, name: str, image: str) -> BannerSchemaBase:
+    async def update_banner_image(
+        self, name: str, image: str, description: str
+    ) -> BannerSchemaBase:
         query = (
             sa.update(self.model)
             .where(self.model.name == name)
-            .values(image=image)
+            .values(name=name, image=image, description=description)
             .returning(self.model)
         )
         execute = await self.session.execute(query)
         result = execute.scalar_one()
         return BannerSchemaBase.model_validate(result)
 
-    async def get_banner(self, page: str) -> BannerSchemaBase:
+    async def get_banner(self, page: str) -> BannerSchemaBase | None:
         query = sa.select(self.model).where(self.model.name == page)
         model = await self.session.execute(query)
         result = model.scalar()
+        if result is None:
+            return None
         return BannerSchemaBase.model_validate(result)
 
     async def get_info_pages(self) -> list[BannerSchemaBase]:
@@ -40,3 +44,11 @@ class BannerRepoImpl:
         model = await self.session.execute(query)
         result = model.scalars().all()
         return [BannerSchemaBase.model_validate(banner) for banner in result]
+
+    async def delete(self, page: str) -> BannerSchemaBase:
+        stmt = (
+            sa.delete(self.model).where(self.model.name == page).returning(self.model)
+        )
+        execute = await self.session.execute(stmt)
+        result = execute.scalar_one()
+        return BannerSchemaBase.model_validate(result)

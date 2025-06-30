@@ -19,7 +19,9 @@ admin_banner_router.message.filter(ChatTypeFilter(["private"]), IsAdmin())
 async def add_name_banner(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
     await state.set_state(AddBanner.name)
-    await callback.message.answer(text="Введите название банера")
+    await callback.message.answer(
+        text="Введите название страницы: main, catalog, carts, category"
+    )
 
 
 @admin_banner_router.message(AddBanner.name, F.text)
@@ -29,10 +31,31 @@ async def add_description_banner(message: types.Message, state: FSMContext):
     await message.answer(text="Загрузите изображение банера")
 
 
-@admin_banner_router.message(AddBanner.image, F.photo)
-async def confirm_banner(message: types.Message, state: FSMContext):
+@admin_banner_router.message(
+    AddBanner.image,
+    F.photo,
+)
+async def confirm_banner(
+    message: types.Message, state: FSMContext, session: AsyncSession
+):
     await state.update_data(image=message.photo[-1].file_id)
     await state.update_data(description=message.caption.strip())
+    for_page = await state.get_data()
+    pages_names = [
+        page.name for page in await BannerRepoImpl(session=session).get_info_pages()
+    ]
+    if for_page["name"] in pages_names:
+        await BannerRepoImpl(session=session).update_banner_image(
+            name=for_page["name"],
+            image=for_page["image"],
+            description=for_page["description"],
+        )
+        await message.answer(
+            f"Баннер изменен:\
+                            \n{', '.join(pages_names)}"
+        )
+        await state.clear()
+        return
     await state.set_state(AddBanner.confirmation)
     data = await state.get_data()
     await message.answer(

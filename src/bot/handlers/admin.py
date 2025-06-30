@@ -9,6 +9,9 @@ from src.bot.handlers.admin_handlers.add_item_product_model import (
     admin_add_item_product,
 )
 from src.bot.handlers.admin_handlers.add_model_router import admin_add_model
+from src.bot.handlers.admin_handlers.delete_banner_router import (
+    admin_banner_delete_router,
+)
 from src.bot.handlers.admin_handlers.handler_category import admin_router_category
 from src.bot.handlers.admin_handlers.update_router import admin_router_update
 from src.bot.handlers.admin_handlers.variant_router import admin_variant_router
@@ -26,6 +29,7 @@ admin_router.include_routers(
     admin_add_item_product,
     admin_banner_router,
     admin_variant_router,
+    admin_banner_delete_router,
 )
 
 
@@ -98,7 +102,7 @@ async def change_product(
             f"{idx}  {product.name}\n {product.description}",
             reply_markup=get_callback_btns(
                 btns={
-                    "Удалить модель": f"delete_{product.id}",
+                    "Удалить модель": f"delete_model_{product.id}",
                     "Изменить модель": f"update_{product.id}",
                     "Просмотреть варианты": f"select_variants_{product.id}",
                 }
@@ -106,7 +110,7 @@ async def change_product(
         )
 
 
-@admin_router.callback_query(StateFilter(None), F.data.startswith("delete_"))
+@admin_router.callback_query(StateFilter(None), F.data.startswith("delete_model_"))
 async def delete_product(callback: types.CallbackQuery, session: AsyncSession):
     data = callback.data.split("_")[-1]
     product = await ProductsRepoImpl(session=session).delete(int(data))
