@@ -15,7 +15,7 @@ from src.bot.handlers.admin_handlers.delete_banner_router import (
 from src.bot.handlers.admin_handlers.handler_category import admin_router_category
 from src.bot.handlers.admin_handlers.update_router import admin_router_update
 from src.bot.handlers.admin_handlers.variant_router import admin_variant_router
-from src.bot.keyboards.inline_keyboards import get_callback_btns, ADMIN_INLINE_KB
+from src.bot.keyboards.inline_common_buttons import get_callback_btns, ADMIN_INLINE_KB
 from src.bot.states.states import AddProduct, AddItemProduct
 
 from src.infrastructure.database.repositories.products_repo import ProductsRepoImpl

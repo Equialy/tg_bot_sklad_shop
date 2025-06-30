@@ -5,7 +5,7 @@ from aiogram.utils import markdown
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bot.filters.chat_types import ChatTypeFilter, IsAdmin
-from src.bot.keyboards.inline_keyboards import ADMIN_INLINE_KB
+from src.bot.keyboards.inline_common_buttons import ADMIN_INLINE_KB
 from src.bot.keyboards.reply_keyboard import get_reply_keyboard
 from src.bot.schemas.variant_schema import VariantSchemaRead, VariantSchemaBase
 from src.bot.states.states import AddItemProduct

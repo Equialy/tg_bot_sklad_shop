@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bot.filters.chat_types import ChatTypeFilter, IsAdmin
 
-from src.bot.keyboards.inline_keyboards import get_callback_btns, ADMIN_INLINE_KB
+from src.bot.keyboards.inline_common_buttons import get_callback_btns, ADMIN_INLINE_KB
 from src.bot.keyboards.reply_keyboard import get_reply_keyboard
 from src.bot.schemas.banner_schema import BannerSchemaRead
 from src.bot.states.states import AddBanner, DeleteBanner

@@ -5,7 +5,7 @@ from aiogram.utils import markdown
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bot.filters.chat_types import ChatTypeFilter
-from src.bot.keyboards.inline_keyboards import get_callback_btns
+from src.bot.keyboards.inline_common_buttons import get_callback_btns
 from src.infrastructure.database.repositories.categories_repo import (
     CategoryRepositoryImpl,
 )
