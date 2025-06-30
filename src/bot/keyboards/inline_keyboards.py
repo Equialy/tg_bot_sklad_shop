@@ -203,6 +203,8 @@ def get_user_cart(
                 text="Заказать",
                 callback_data=MenuCallBack(level=6, menu_name="order").pack(),
             ),
+            InlineKeyboardButton(text="Купить",
+                                 callback_data="buy")
         ]
         return keyboard.row(*row2).as_markup()
     else:

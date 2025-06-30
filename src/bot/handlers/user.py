@@ -2,13 +2,16 @@ from aiogram import Router, types, F
 from aiogram.filters import CommandStart, Command, or_f
 from aiogram.types import InputMediaPhoto
 from aiogram.utils import markdown
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bot.filters.chat_types import ChatTypeFilter
-from src.bot.keyboards.inline_common_buttons import get_callback_btns
+from src.bot.keyboards.inline_common_buttons import get_callback_btns, get_url_btns
 from src.bot.keyboards.inline_keyboards import MenuCallBack
 from src.bot.keyboards.menu import get_menu_content
 from src.bot.schemas.user_schema import UserSchemaRead
+from src.bot.utils.payment import create, check_payment
+from src.config.config import setting
 from src.infrastructure.database.repositories.banner_repo import BannerRepoImpl
 from src.infrastructure.database.repositories.cart_repo import CartRepoImpl
 from src.infrastructure.database.repositories.categories_repo import (
@@ -63,6 +66,35 @@ async def user_menu(
 
     await callback.message.edit_media(media=media, reply_markup=reply_markup)
     await callback.answer()
+
+
+@user_private_router.callback_query(F.data == "buy")
+async def payment_handler(callback: types.CallbackQuery, session: AsyncSession):
+    payment_url, payment_id = await create(
+        amount=setting.payment.price, telegram_id=callback.from_user.id
+    )
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Оплатить",
+                   url=f"{payment_url}")
+    builder.button(text="Проверить оплату",callback_data=f"check_{payment_id}")
+
+    await callback.message.answer(
+        text=f"Оплата через Юкасса"
+             f"{payment_url} "
+             f"\nID платежа: {payment_id}",
+        reply_markup=builder.as_markup(),
+    )
+
+
+@user_private_router.callback_query(F.data.startswith("check"))
+async def check_handler(callback: types.CallbackQuery, session: AsyncSession):
+    result = await check_payment(payment_id=callback.data.split("_")[-1])
+    print(result)
+    if result:
+        await callback.message.answer(text="Оплата еще не прошла")
+
+    else:
+        await callback.message.answer(text="Оплата прошла успешно")
 
 
 #

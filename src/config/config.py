@@ -40,9 +40,15 @@ class CSVReports(BaseSettings):
     WEEKLY_TIME: str
     REPORT_CHAT_ID: int
 
+class Payments(BaseSettings):
+    account_id_yookassa: str
+    secret_key_yookassa: str
+    price: str
+
 
 class Settings(BaseSettings):
     tg_bot: TgBot
+    payment: Payments
     # cache: Redis
     # reports: CSVReports
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent

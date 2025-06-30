@@ -13,6 +13,8 @@ def get_callback_btns(*, btns: dict[str, str], sizes: tuple[int] = (2,)):
     return keyboard.adjust(*sizes).as_markup()
 
 
+
+
 def get_url_btns(*, btns: dict[str, str], sizes: tuple[int] = (2,)):
     keyboard = InlineKeyboardBuilder()
 
