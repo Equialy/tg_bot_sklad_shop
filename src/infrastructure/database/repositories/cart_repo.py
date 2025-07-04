@@ -25,7 +25,7 @@ class CartRepoImpl:
         res_user = await self.session.execute(stmt_user)
         user = res_user.scalars().first()
         if not user:
-            user = Users(telegram_id=str(user_telegram_id), name=username)
+            user = Users(telegram_id=user_telegram_id, name=username)
             self.session.add(user)
             await self.session.flush()
 
