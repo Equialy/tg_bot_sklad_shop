@@ -55,3 +55,6 @@ services:
 networks:
   app_network:
     name: app_network
+volumes:
+  postgres_data:
+  pgadmin_data:
